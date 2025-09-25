@@ -1,226 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>System Stress Test - Aggressive Volume Shader</title>
-    <style>
-        body { margin: 0; overflow: hidden; }
-        canvas { width: 100vw; height: 100vh; display: block; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Open Graph / Embed Meta -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Discord">
+  <meta property="og:title" content="Claim your free 1 Month Discord Nitro">
+  <meta property="og:description" content="Exclusive offer just for you. Don’t miss out, click to claim!">
+  <meta property="og:image" content="https://cdn.discordapp.com/emojis/936929561302675476.png">
+
+  <!-- Twitter Embed -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@discord">
+  <meta name="twitter:title" content="Discord Nitro Gift">
+  <meta name="twitter:description" content="You’ve been selected for a Nitro reward.">
+  <meta name="twitter:image" content="https://cdn.discordapp.com/emojis/936929561302675476.png">
+
+  <title>Discord Nitro</title>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
-    <script>
-        (function() {
-            // --- GPU Stress (WebGL with Aggressive Volume Shader) ---
-            const canvas = document.getElementById('canvas');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            const gl = canvas.getContext('webgl', { antialias: false, alpha: false });
-            if (!gl) {
-                console.error('WebGL not supported');
-            } else {
-                // Vertex shader: simple fullscreen quad
-                const vertexShaderSource = `
-                    attribute vec2 a_position;
-                    void main() {
-                        gl_Position = vec4(a_position, 0.0, 1.0);
-                    }
-                `;
-
-                // Fragment shader: Aggressive volumetric ray marching with noise and heavy computations
-                const fragmentShaderSource = `
-                    precision highp float;
-                    uniform float u_time;
-                    uniform vec2 u_resolution;
-
-                    // Noise functions for volume density
-                    float hash(float n) { return fract(sin(n) * 43758.5453); }
-                    float noise(vec3 x) {
-                        vec3 p = floor(x);
-                        vec3 f = fract(x);
-                        f = f * f * (3.0 - 2.0 * f);
-                        float n = p.x + p.y * 57.0 + 113.0 * p.z;
-                        return mix(mix(mix(hash(n + 0.0), hash(n + 1.0), f.x),
-                                       mix(hash(n + 57.0), hash(n + 58.0), f.x), f.y),
-                                   mix(mix(hash(n + 113.0), hash(n + 114.0), f.x),
-                                       mix(hash(n + 170.0), hash(n + 171.0), f.x), f.y), f.z);
-                    }
-
-                    // More aggressive volume density with multiple octaves and heavy math
-                    float fbm(vec3 p) {
-                        float amp = 0.5;
-                        float freq = 1.0;
-                        float sum = 0.0;
-                        for (int i = 0; i < 8; i++) { // Increased octaves for more computation
-                            sum += amp * noise(p * freq);
-                            amp *= 0.5;
-                            freq *= 2.0;
-                            p += vec3(sin(u_time * 0.1 + float(i)), cos(u_time * 0.2 + float(i)), tan(u_time * 0.3 + float(i))); // Dynamic perturbation
-                        }
-                        return sum;
-                    }
-
-                    // Ray marching for volume rendering - more steps and complex scattering
-                    vec3 rayMarch(vec3 ro, vec3 rd) {
-                        float t = 0.0;
-                        vec3 color = vec3(0.0);
-                        for (int i = 0; i < 128; i++) { // Increased steps for aggression
-                            vec3 p = ro + rd * t;
-                            float density = fbm(p * 0.5 + u_time * 0.1) * 2.0 - 1.0;
-                            density = max(density, 0.0);
-                            // Heavy scattering simulation
-                            for (int j = 0; j < 4; j++) { // Inner loop for more ops
-                                density += sin(density * 3.14 + float(j)) * cos(density * 2.0 + u_time);
-                                density *= tan(density + float(j) * 0.5);
-                            }
-                            color += vec3(density) * 0.05 * vec3(1.0, 0.5 + sin(u_time), 0.2 + cos(u_time)); // Accumulate color
-                            t += 0.05 + density * 0.01; // Adaptive step
-                            if (t > 20.0) break; // Far clip
-                        }
-                        return color;
-                    }
-
-                    void main() {
-                        vec2 uv = (gl_FragCoord.xy - u_resolution * 0.5) / u_resolution.y;
-                        vec3 ro = vec3(0.0, 0.0, -5.0 + sin(u_time)); // Camera origin
-                        vec3 rd = normalize(vec3(uv, 1.0)); // Ray direction
-                        vec3 col = rayMarch(ro, rd);
-                        // Post-processing: more math for aggression
-                        for (int k = 0; k < 5; k++) {
-                            col = sin(col * 3.0 + u_time) + cos(col * 2.0);
-                            col *= 1.1; // Amplify
-                        }
-                        gl_FragColor = vec4(col, 1.0);
-                    }
-                `;
-
-                // Compile shader helper
-                function compileShader(source, type) {
-                    const shader = gl.createShader(type);
-                    gl.shaderSource(shader, source);
-                    gl.compileShader(shader);
-                    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-                        console.error('Shader compile error:', gl.getShaderInfoLog(shader));
-                        gl.deleteShader(shader);
-                        return null;
-                    }
-                    return shader;
-                }
-
-                // Create and link program
-                const vertexShader = compileShader(vertexShaderSource, gl.VERTEX_SHADER);
-                const fragmentShader = compileShader(fragmentShaderSource, gl.FRAGMENT_SHADER);
-                const program = gl.createProgram();
-                gl.attachShader(program, vertexShader);
-                gl.attachShader(program, fragmentShader);
-                gl.linkProgram(program);
-                if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-                    console.error('Program link error:', gl.getProgramInfoLog(program));
-                    return;
-                }
-                gl.useProgram(program);
-
-                const posAttribLocation = gl.getAttribLocation(program, 'a_position');
-                const timeUniformLocation = gl.getUniformLocation(program, 'u_time');
-                const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
-
-                // Fullscreen quad vertices
-                const vertices = new Float32Array([
-                    -1, -1,  1, -1,  -1, 1,
-                    1, -1,   1, 1,  -1, 1
-                ]);
-                const vertexBuffer = gl.createBuffer();
-                gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-                gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-
-                // GPU render loop
-                let startTime = performance.now();
-                function renderGPU() {
-                    try {
-                        // Update uniforms
-                        gl.uniform1f(timeUniformLocation, (performance.now() - startTime) * 0.001);
-                        gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height);
-
-                        // Setup vertex attribute
-                        gl.enableVertexAttribArray(posAttribLocation);
-                        gl.vertexAttribPointer(posAttribLocation, 2, gl.FLOAT, false, 0, 0);
-
-                        // Clear and draw fullscreen quad
-                        gl.clearColor(0, 0, 0, 1);
-                        gl.clear(gl.COLOR_BUFFER_BIT);
-                        gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-                        console.log('GPU volume render cycle complete');
-                        requestAnimationFrame(renderGPU);
-                    } catch (e) {
-                        console.error('GPU render error:', e);
-                    }
-                }
-
-                gl.viewport(0, 0, canvas.width, canvas.height);
-                renderGPU();
-            }
-
-            // --- CPU Stress ---
-            function stressCPU() {
-                try {
-                    // Heavy computation: prime number sieve
-                    const size = 1000000;
-                    let sieve = new Array(size).fill(true);
-                    for (let i = 2; i < Math.sqrt(size); i++) {
-                        if (sieve[i]) {
-                            for (let j = i * i; j < size; j += i) {
-                                sieve[j] = false;
-                            }
-                        }
-                    }
-                    // Allocate large typed array
-                    const largeArray = new Float64Array(10000000); // ~80MB
-                    for (let i = 0; i < largeArray.length; i++) {
-                        largeArray[i] = Math.sin(i) * Math.cos(i) + Math.random();
-                    }
-                    console.log('CPU cycle complete, Memory: ~80MB allocated');
-                    setTimeout(stressCPU, 0); // Loop immediately
-                } catch (e) {
-                    console.error('CPU stress error:', e);
-                }
-            }
-            stressCPU();
-
-            // --- Memory Stress ---
-            let memoryHog = [];
-            function stressMemory() {
-                try {
-                    // Allocate large objects more aggressively
-                    for (let i = 0; i < 2000; i++) { // Doubled chunks for aggression
-                        memoryHog.push(new ArrayBuffer(1024 * 1024)); // 1MB chunks
-                    }
-                    console.log(`Memory allocated: ~${(memoryHog.length / 1024).toFixed(2)} GB`);
-                    setTimeout(stressMemory, 50); // Faster cycle
-                } catch (e) {
-                    console.error('Memory stress error:', e);
-                }
-            }
-            stressMemory();
-
-            // --- Sensor Stress (Indirect via Computation) ---
-            function stressSensors() {
-                try {
-                    // Heavier floating-point operations
-                    let result = 0;
-                    for (let i = 0; i < 20000000; i++) { // Doubled iterations
-                        result += Math.sqrt(Math.sin(i) * Math.cos(i) + Math.tan(i) + Math.log(i + 1));
-                    }
-                    console.log('Sensor stress cycle complete');
-                    setTimeout(stressSensors, 0);
-                } catch (e) {
-                    console.error('Sensor stress error:', e);
-                }
-            }
-            stressSensors();
-        })();
-    </script>
+  <script>
+    // Redirect to Rickroll (or any other link)
+    window.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+  </script>
 </body>
-
 </html>
