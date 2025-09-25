@@ -1,36 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Discord">
+  <meta name="twitter:card" content="summary_large_image">
   <title>Discord Embed</title>
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const title = params.get("title") || "Embed Title";
-    const desc = params.get("description") || "Embed description";
-    const url = params.get("url") || "https://discord.com";
-    const image = params.get("image");
-    const thumbnail = params.get("thumbnail");
-    const author = params.get("author");
-    const authorIcon = params.get("authorIcon");
-    const footer = params.get("footer");
-    const footerIcon = params.get("footerIcon");
+    function parseEmbeds() {
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get("data");
+      try { return JSON.parse(raw); }
+      catch { return []; }
+    }
 
-    document.write(`
-      <meta property="og:type" content="website">
-      <meta property="og:title" content="${title}">
-      <meta property="og:description" content="${desc}">
-      <meta property="og:url" content="${url}">
-      ${image ? `<meta property="og:image" content="${image}">` : ""}
-      <meta name="twitter:card" content="summary_large_image">
-      <meta name="twitter:title" content="${title}">
-      <meta name="twitter:description" content="${desc}">
-      ${image ? `<meta name="twitter:image" content="${image}">` : ""}
-    `);
+    function setMeta(embed) {
+      if (embed.title) addMeta("og:title", embed.title);
+      if (embed.desc) addMeta("og:description", embed.desc);
+      if (embed.image) addMeta("og:image", embed.image);
+      if (embed.url) addMeta("og:url", embed.url);
+    }
 
-    setTimeout(()=>{ window.location.href = url; }, 500);
+    function addMeta(property, content) {
+      const meta = document.createElement("meta");
+      meta.setAttribute("property", property);
+      meta.setAttribute("content", content);
+      document.head.appendChild(meta);
+    }
+
+    window.onload = () => {
+      const embeds = parseEmbeds();
+      if (!embeds.length) return;
+
+      // first embed defines preview
+      setMeta(embeds[0]);
+
+      // redirect if first embed has URL
+      if (embeds[0].url) {
+        window.location.href = embeds[0].url;
+      }
+    }
   </script>
 </head>
-<body>
-  <h2 style="color:white;text-align:center;">Redirecting...</h2>
+<body style="background:#2f3136; color:white; font-family:sans-serif;">
+  <h2 style="padding:20px;">Loading embed...</h2>
 </body>
 </html>
