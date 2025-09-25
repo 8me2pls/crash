@@ -1,151 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Discord Webhook-Style Embed Builder</title>
+  <meta charset="UTF-8">
+  <title>Embed Maker</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #2f3136;
-      color: white;
-      margin: 0; padding: 20px;
-    }
-    h1 { color: #7289da; }
-    .embed-block {
-      background: #36393f;
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      border-left: 4px solid #5865f2;
-    }
-    label { display:block; margin-top:6px; }
-    input, textarea, select {
-      width: 100%; padding: 6px; margin-top: 4px;
-      border-radius: 6px; border: none;
-    }
-    .fields {
-      margin-top: 10px;
-      background: #202225;
-      padding: 8px;
-      border-radius: 6px;
-    }
-    .field-block {
-      margin-bottom: 8px;
-      padding: 6px;
-      background: #2f3136;
-      border-radius: 6px;
-    }
-    button {
-      margin-top: 10px;
-      padding: 8px 12px;
-      border: none;
-      background: #5865f2;
-      color: white;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:hover { background: #4752c4; }
-    .output {
-      margin-top: 20px;
-      background: #202225;
-      padding: 10px;
-      border-radius: 6px;
-    }
+    body { background:#2c2f33; color:#fff; font-family:sans-serif; display:flex; justify-content:center; padding:20px; }
+    .box { background:#23272a; padding:20px; border-radius:10px; max-width:500px; width:100%; }
+    input, textarea, button { width:100%; margin:6px 0; padding:8px; border:none; border-radius:5px; }
+    button { background:#5865F2; color:#fff; cursor:pointer; }
+    .embed { background:#2f3136; border-radius:8px; padding:15px; margin-top:15px; border-left:6px solid #5865F2; cursor:pointer; }
+    .embed h2 { margin:0; color:#fff; }
+    .embed p { color:#ddd; margin:5px 0; }
+    .embed img { max-width:80px; margin-top:10px; border-radius:5px; }
+    .hidden { display:none; }
   </style>
 </head>
 <body>
-  <h1>Discord Webhook-Style Embed Builder</h1>
-
-  <div id="embeds"></div>
-  <button onclick="addEmbed()">+ Add Embed</button>
-  <button onclick="generateLink()">Generate Link</button>
-
-  <div class="output" id="output" style="display:none;">
-    <p>Generated link (share this in Discord):</p>
-    <input type="text" id="linkOutput" readonly>
+  <div class="box">
+    <h2>Embed Maker</h2>
+    <form id="f">
+      <input id="title" placeholder="Title" required>
+      <textarea id="desc" placeholder="Description"></textarea>
+      <input id="color" type="color" value="#5865F2">
+      <input id="thumb" placeholder="Thumbnail URL">
+      <input id="redirect" placeholder="Redirect URL" required>
+      <button>Generate Link</button>
+    </form>
+    <div id="out" class="hidden">
+      <p>Share this link:</p>
+      <input id="link" readonly>
+    </div>
   </div>
 
   <script>
-    let embedCount = 0;
+    const f = document.getElementById("f");
+    const out = document.getElementById("out");
+    const link = document.getElementById("link");
 
-    function addEmbed() {
-      const container = document.getElementById("embeds");
-      embedCount++;
-      const div = document.createElement("div");
-      div.className = "embed-block";
-      div.innerHTML = `
-        <h3>Embed #${embedCount}</h3>
-        <label>Title <input type="text" name="title"></label>
-        <label>Description <textarea name="desc"></textarea></label>
-        <label>Redirect URL <input type="text" name="url"></label>
-        <label>Image URL <input type="text" name="image"></label>
-        <label>Thumbnail URL <input type="text" name="thumb"></label>
-        <label>Author <input type="text" name="author"></label>
-        <label>Footer <input type="text" name="footer"></label>
-        <label>Color <input type="color" name="color" value="#5865f2"></label>
-        <div class="fields">
-          <h4>Fields</h4>
-          <div class="field-list"></div>
-          <button type="button" onclick="addField(this)">+ Add Field</button>
-        </div>
-      `;
-      container.appendChild(div);
-    }
-
-    function addField(btn) {
-      const list = btn.parentElement.querySelector(".field-list");
-      const block = document.createElement("div");
-      block.className = "field-block";
-      block.innerHTML = `
-        <label>Name <input type="text" name="fname"></label>
-        <label>Value <textarea name="fvalue"></textarea></label>
-        <label>Inline 
-          <select name="finline">
-            <option value="true">True</option>
-            <option value="false">False</option>
-          </select>
-        </label>
-      `;
-      list.appendChild(block);
-    }
-
-    function generateLink() {
-      const blocks = document.querySelectorAll(".embed-block");
-      const embeds = [];
-
-      blocks.forEach(block => {
-        const obj = {};
-        block.querySelectorAll("input, textarea, select").forEach(el => {
-          if (el.name.startsWith("f")) return; // skip field inputs here
-          if (el.value) obj[el.name] = el.value;
-        });
-
-        // collect fields
-        const fields = [];
-        block.querySelectorAll(".field-block").forEach(fb => {
-          const name = fb.querySelector('[name="fname"]').value;
-          const value = fb.querySelector('[name="fvalue"]').value;
-          const inline = fb.querySelector('[name="finline"]').value === "true";
-          if (name && value) fields.push({ name, value, inline });
-        });
-        if (fields.length) obj.fields = fields;
-
-        embeds.push(obj);
+    f.addEventListener("submit", e => {
+      e.preventDefault();
+      const p = new URLSearchParams({
+        t: f.title.value,
+        d: f.desc.value,
+        c: f.color.value,
+        th: f.thumb.value,
+        r: f.redirect.value
       });
+      link.value = `${location.origin}${location.pathname}?${p.toString()}`;
+      out.classList.remove("hidden");
+    });
 
-      const base = window.location.origin + "/embed.html";
-      const params = new URLSearchParams({
-        data: JSON.stringify(embeds)
-      });
-      const link = `${base}?${params.toString()}`;
-
-      document.getElementById("output").style.display = "block";
-      document.getElementById("linkOutput").value = link;
+    // --- Render embed if query present ---
+    const q = new URLSearchParams(location.search);
+    if (q.get("t")) {
+      document.body.innerHTML = `
+        <div class="embed" id="emb" style="border-left:6px solid ${q.get("c")||"#5865F2"}">
+          <h2>${q.get("t")}</h2>
+          <p>${q.get("d")||""}</p>
+          ${q.get("th") ? `<img src="${q.get("th")}" alt="thumb">` : ""}
+        </div>`;
+      document.getElementById("emb").onclick = () => location.href = q.get("r") || "/";
     }
-
-    // Add one embed on load
-    addEmbed();
   </script>
 </body>
 </html>
