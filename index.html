@@ -1,29 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
+  <title>Discord Embed Maker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Fake Nitro Gift Embed -->
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Discord">
-  <meta property="og:title" content="A WILD GIFT APPEARS!">
-  <meta property="og:description" content="Nitro — Click 'ACCEPT' to claim your gift">
-  <meta property="og:image" content="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT5_YyLSM2Rm5-JwRwhrQfGFiRxQF4zEXCzew&usqp=CAU">
-  <meta property="og:url" content="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="A WILD GIFT APPEARS!">
-  <meta name="twitter:description" content="Nitro — Click 'ACCEPT' to claim your gift">
-  <meta name="twitter:image" content="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT5_YyLSM2Rm5-JwRwhrQfGFiRxQF4zEXCzew&usqp=CAU">
-
-  <title>Discord Gift</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #2f3136; color: #fff; padding: 20px; }
+    input, textarea { width: 100%; padding: 6px; margin: 6px 0; border-radius: 4px; border: none; }
+    label { font-size: 14px; font-weight: bold; margin-top: 10px; display: block; }
+    .card { background: #36393f; border-left: 4px solid #5865F2; padding: 15px; margin-top: 20px; border-radius: 6px; }
+    button { background: #5865F2; color: #fff; border: none; padding: 10px 20px; margin-top: 15px; border-radius: 4px; cursor: pointer; }
+    .preview { margin-top: 30px; }
+    .embed { background: #2b2d31; border-left: 4px solid #5865F2; padding: 12px; border-radius: 6px; }
+    .embed-title { font-weight: bold; font-size: 16px; margin-bottom: 6px; }
+    .embed-desc { font-size: 14px; }
+  </style>
 </head>
 <body>
+  <h1>Discord Embed Maker</h1>
+  <form id="embedForm">
+    <label>Title</label>
+    <input type="text" id="title" placeholder="Embed Title">
+
+    <label>Description</label>
+    <textarea id="description" placeholder="Embed description"></textarea>
+
+    <label>URL (redirect)</label>
+    <input type="text" id="url" placeholder="https://...">
+
+    <label>Image URL</label>
+    <input type="text" id="image" placeholder="https://...">
+
+    <label>Thumbnail URL</label>
+    <input type="text" id="thumbnail" placeholder="https://...">
+
+    <label>Author Name</label>
+    <input type="text" id="author">
+
+    <label>Author Icon</label>
+    <input type="text" id="authorIcon">
+
+    <label>Footer Text</label>
+    <input type="text" id="footer">
+
+    <label>Footer Icon</label>
+    <input type="text" id="footerIcon">
+
+    <label>Color (hex)</label>
+    <input type="text" id="color" placeholder="#5865F2">
+
+    <button type="button" onclick="generateLink()">Generate Link</button>
+  </form>
+
+  <div class="preview">
+    <h2>Preview</h2>
+    <div class="embed" id="embedPreview">
+      <div class="embed-title">Embed Title</div>
+      <div class="embed-desc">Embed description goes here</div>
+    </div>
+  </div>
+
   <script>
-    // Redirect when someone opens it
-    window.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    const form = document.getElementById("embedForm");
+    const preview = document.getElementById("embedPreview");
+
+    form.addEventListener("input", () => {
+      const title = document.getElementById("title").value || "Embed Title";
+      const desc = document.getElementById("description").value || "Embed description goes here";
+      preview.innerHTML = `<div class="embed-title">${title}</div><div class="embed-desc">${desc}</div>`;
+    });
+
+    function generateLink() {
+      const params = new URLSearchParams();
+      ["title","description","url","image","thumbnail","author","authorIcon","footer","footerIcon","color"]
+        .forEach(id => {
+          const val = document.getElementById(id).value;
+          if(val) params.append(id, val);
+        });
+
+      const link = `${window.location.origin}/embed.html?${params.toString()}`;
+      navigator.clipboard.writeText(link);
+      alert("Embed link copied:\n" + link);
+    }
   </script>
 </body>
 </html>
