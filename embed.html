@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Discord Embed</title>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const title = params.get("title") || "Embed Title";
+    const desc = params.get("description") || "Embed description";
+    const url = params.get("url") || "https://discord.com";
+    const image = params.get("image");
+    const thumbnail = params.get("thumbnail");
+    const author = params.get("author");
+    const authorIcon = params.get("authorIcon");
+    const footer = params.get("footer");
+    const footerIcon = params.get("footerIcon");
+
+    document.write(`
+      <meta property="og:type" content="website">
+      <meta property="og:title" content="${title}">
+      <meta property="og:description" content="${desc}">
+      <meta property="og:url" content="${url}">
+      ${image ? `<meta property="og:image" content="${image}">` : ""}
+      <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:title" content="${title}">
+      <meta name="twitter:description" content="${desc}">
+      ${image ? `<meta name="twitter:image" content="${image}">` : ""}
+    `);
+
+    setTimeout(()=>{ window.location.href = url; }, 500);
+  </script>
+</head>
+<body>
+  <h2 style="color:white;text-align:center;">Redirecting...</h2>
+</body>
+</html>
