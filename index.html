@@ -1,116 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Stackable Embed Generator</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; }
-    .embed { background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
-    input, textarea { width: 100%; margin: 5px 0; padding: 8px; border-radius: 6px; border: none; }
-    button { margin: 5px 0; padding: 10px; border: none; border-radius: 6px; cursor: pointer; }
-    .primary { background: #5865f2; color: #fff; }
-    .secondary { background: #444; color: #fff; }
-    pre { background: #2d2d2d; padding: 10px; border-radius: 6px; margin-top: 10px; white-space: pre-wrap; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>H4X3R Tools</title>
+<style>
+html, body {height:100%; margin:0; padding:0; font-family:'Roboto',sans-serif; background: linear-gradient(to bottom,#2b003d 0%,#1a1a2e 60%,#3b0a54 100%); color:#fff; overflow-x:hidden;}
+body {display:flex; flex-direction:column; justify-content:space-between; align-items:center; min-height:100vh;}
+header {width:100%; padding:20px; background:linear-gradient(90deg,#00bfff,#6a0dad); text-align:center; font-size:32px; font-weight:700; color:#fff; text-shadow:0 0 5px #fff,0 0 10px #6a0dad,0 0 20px #00bfff; border-bottom-left-radius:40px; border-bottom-right-radius:40px; box-shadow:0 4px 20px rgba(0,0,0,0.5);}
+.container {width:90%; max-width:700px; background:rgba(255,255,255,0.05); padding:25px; border-radius:50px; box-shadow:0 0 25px rgba(106,13,173,0.5); backdrop-filter:blur(10px); margin-top:40px;}
+input, button {width:100%; padding:14px; margin:10px 0; border-radius:50px; font-size:16px; box-sizing:border-box;}
+input {border:2px solid #6a0dad; background:rgba(255,255,255,0.05); color:#fff;}
+input:focus {outline:none; border-color:#00bfff; box-shadow:0 0 12px #00bfff;}
+button {background:linear-gradient(45deg,#6a0dad,#00bfff); color:#fff; border:none; cursor:pointer; font-weight:500; transition:0.3s; box-shadow:0 0 12px rgba(0,191,255,0.5);}
+button:hover {transform:scale(1.05); box-shadow:0 0 18px rgba(0,191,255,0.8);}
+#onboarding {display:block; text-align:center;}
+.step {margin:15px 0;}
+.step button {position:relative;}
+.step.done button {background:#2e7d32;}
+.step.done button::after {content:"✔"; position:absolute; right:15px; font-weight:bold;}
+.category {background:rgba(255,255,255,0.1); margin:8px 0; padding:14px 20px; border-radius:50px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;}
+.tools {display:none; flex-direction:column; margin-top:8px;}
+.tool-item {margin:5px 0;}
+.tool-item button {border-radius:50px; padding:12px 20px; background:linear-gradient(45deg,#00bfff,#6a0dad);}
+#modal {display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); justify-content:center; align-items:center; color:#fff; padding:20px; z-index:1000;}
+#modalInner {position:relative; background:rgba(255,255,255,0.05); padding:25px 30px; padding-top:36px; border-radius:20px; max-width:760px; width:calc(100% - 40px); max-height:80vh; overflow-y:auto; white-space:pre-wrap;}
+#copyBtn {position:absolute; top:8px; right:12px; font-size:20px; cursor:pointer;}
+#toast {position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); padding:10px 14px; border-radius:14px; display:none; z-index:2000;}
+#loading {display:flex; justify-content:center; align-items:center; height:100vh; font-size:20px; font-weight:500; color:#fff; position:absolute; top:0; left:0; width:100%;}
+footer {width:100%; padding:20px; background:rgba(0,0,0,0.9); text-align:center; font-size:14px; color:#ccc;}
+#secretZone {position:fixed; bottom:10px; left:10px; width:50px; height:50px; background:transparent;}
+</style>
 </head>
 <body>
-  <h1>Stackable Embed Generator</h1>
-  <div id="embeds"></div>
-  <button class="secondary" onclick="addEmbed()">+ Add Embed</button>
-  <button class="primary" onclick="generateEmbeds()">Generate JSON</button>
-  <button class="secondary" onclick="copyLink()">Copy Link</button>
-  <button class="secondary" onclick="importEmbed()">Import JSON</button>
-  <pre id="output"></pre>
+<header>H4X3R Tools</header>
 
-  <script>
-    const embedsDiv = document.getElementById("embeds");
-    const output = document.getElementById("output");
+<div id="loading">⏳ Loading...</div>
 
-    function addEmbed(data = {}) {
-      const div = document.createElement("div");
-      div.className = "embed";
-      div.innerHTML = `
-        <input type="text" placeholder="Title" value="${data.title || ""}">
-        <textarea placeholder="Description">${data.description || ""}</textarea>
-        <input type="text" placeholder="Color (#hex)" value="${data.color || ""}">
-        <input type="text" placeholder="URL" value="${data.url || ""}">
-        <input type="text" placeholder="Footer" value="${data.footer || ""}">
-        <input type="text" placeholder="Image URL" value="${data.image || ""}">
-        <button class="secondary" onclick="this.parentElement.remove()">Remove</button>
-      `;
-      embedsDiv.appendChild(div);
+<div class="container">
+  <!-- Onboarding -->
+  <div id="onboarding">
+    <h2>⚡ Welcome to H4XER Tools</h2>
+    <div class="step" id="step1">
+      <button onclick="completeStep(1,'https://t.me/@sz_co0')">Contact Tele</button>
+    </div>
+    <div class="step" id="step2" style="display:none;">
+      <button onclick="completeStep(2,'https://instagram.com/itxsalaih')">Join Channel</button>
+    </div>
+    <div class="step" id="step3" style="display:none;">
+      <button onclick="startApp()">🚀 Explore Tools</button>
+    </div>
+  </div>
+
+  <!-- Login -->
+  <div id="loginBox" style="display:none;">
+    <h2>🔑 Enter Access Code</h2>
+    <input id="passwordInput" type="password" placeholder="Enter access code...">
+    <button id="unlockBtn">🔓 Unlock</button>
+  </div>
+
+  <!-- Tools -->
+  <div id="toolSection" style="display:none;">
+    <h2>🛠 Categories</h2>
+    <div id="categoriesList"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="modal" onclick="closeModal()">
+  <div id="modalInner" onclick="event.stopPropagation()">
+    <span id="copyBtn" onclick="copyModalText()">📋</span>
+    <div id="modalContent"></div>
+  </div>
+</div>
+<div id="toast"></div>
+<div id="secretZone"></div>
+
+<footer>
+  <p>Developed by Dev sz_co | All rights reserved 2025</p>
+</footer>
+
+<script>
+const BIN_ID="68d3ae8ed0ea881f4088e97d";
+const API_KEY="$2a$10$WU9EPi5LbC9ImvrT7UMbUe/5OEEKQc.AobH.V7aAyzLmSvaMnJ0NO";
+const BIN_URL=`https://api.jsonbin.io/v3/b/${BIN_ID}`;
+let binData=null,isLoading=true,tapCount=0,tapTimer=null;
+
+async function loadData(){
+  const loadingEl = document.getElementById('loading');
+  try{
+    const res = await fetch(BIN_URL,{headers:{"X-Master-Key":API_KEY}});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if(!json.record) throw new Error("No 'record' found in JSON");
+    binData=json.record;
+    isLoading=false;
+    loadingEl.remove();
+
+    // 👇 Skip onboarding if already done
+    if(localStorage.getItem("onboardingDone")){
+      document.getElementById("onboarding").style.display="none";
+      document.getElementById("loginBox").style.display="block";
     }
+  }catch(e){
+    console.error(e);
+    loadingEl.innerText="❌ Failed to load data: "+e.message;
+  }
+}
+loadData();
 
-    async function generateEmbeds() {
-      const embeds = Array.from(embedsDiv.children).map(div => {
-        const inputs = div.querySelectorAll("input, textarea");
-        return {
-          title: inputs[0].value,
-          description: inputs[1].value,
-          color: inputs[2].value,
-          url: inputs[3].value,
-          footer: inputs[4].value,
-          image: inputs[5].value,
-        };
-      });
+function completeStep(step,link){
+  window.open(link,"_blank");
+  const el=document.getElementById("step"+step);
+  el.classList.add("done");
+  setTimeout(()=>{
+    if(step===1) document.getElementById("step2").style.display="block";
+    if(step===2) document.getElementById("step3").style.display="block";
+  },2000);
+}
 
-      const res = await fetch("/api/embed", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ embeds }),
-      });
+function startApp(){
+  localStorage.setItem("onboardingDone","true"); // ✅ Remember completion
+  document.getElementById("onboarding").style.display="none";
+  document.getElementById("loginBox").style.display="block";
+}
 
-      const data = await res.json();
-      output.textContent = JSON.stringify(data, null, 2);
-      return data;
-    }
+document.getElementById("unlockBtn").onclick=()=>{
+  if(isLoading){showToast("⏳ Loading...");return;}
+  const val=document.getElementById("passwordInput").value.trim();
+  if(val===binData.keys.toolkit){
+    document.getElementById("loginBox").style.display="none";
+    document.getElementById("toolSection").style.display="block";
+    renderCategories();
+  }else showToast("❌ Invalid access code!");
+};
 
-    async function copyLink() {
-      const data = await generateEmbeds();
-      const link = `${window.location.origin}?data=${encodeURIComponent(JSON.stringify(data))}`;
-      navigator.clipboard.writeText(link);
-      alert("Link copied! Paste it anywhere.");
-    }
+function renderCategories(){
+  const c=document.getElementById("categoriesList");c.innerHTML="";
+  binData.categories.forEach(cat=>{
+    const cd=document.createElement("div");cd.className="category";
+    cd.innerHTML=`<span>${cat.name}</span><span>▼</span>`;
+    const td=document.createElement("div");td.className="tools";
+    cat.tools.forEach(tool=>{
+      const btn=document.createElement("button");
+      btn.textContent=tool.name;
+      btn.onclick=(e)=>{
+        e.stopPropagation();
+        if(tool.link) window.open(tool.link,"_blank");
+        else if(tool.content||tool.text) openModal(tool.content||tool.text);
+        else openModal("⚠️ No content.");
+      };
+      td.appendChild(btn);
+    });
+    cd.onclick=()=>td.style.display=td.style.display==="flex"?"none":"flex";
+    c.appendChild(cd);c.appendChild(td);
+  });
+}
 
-    function importEmbed() {
-      const json = prompt("Paste embed JSON here:");
-      try {
-        const parsed = JSON.parse(json);
-        embedsDiv.innerHTML = "";
-        if (parsed.embeds) {
-          parsed.embeds.forEach(embed => addEmbed({
-            title: embed.title,
-            description: embed.description,
-            color: embed.color ? "#" + embed.color.toString(16) : "",
-            url: embed.url,
-            footer: embed.footer?.text,
-            image: embed.image?.url,
-          }));
-        }
-      } catch {
-        alert("Invalid JSON!");
-      }
-    }
-
-    // Auto-load from ?data=
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has("data")) {
-      try {
-        const parsed = JSON.parse(decodeURIComponent(urlParams.get("data")));
-        if (parsed.embeds) {
-          parsed.embeds.forEach(embed => addEmbed({
-            title: embed.title,
-            description: embed.description,
-            color: embed.color ? "#" + embed.color.toString(16) : "",
-            url: embed.url,
-            footer: embed.footer?.text,
-            image: embed.image?.url,
-          }));
-        }
-      } catch {}
-    } else {
-      addEmbed();
-    }
-  </script>
+function openModal(t){document.getElementById("modalContent").innerText=t;document.getElementById("modal").style.display="flex";}
+function closeModal(){document.getElementById("modal").style.display="none";}
+function copyModalText(){navigator.clipboard.writeText(document.getElementById("modalContent").innerText).then(()=>showToast("✅ Copied"));}
+function showToast(m){const t=document.getElementById("toast");t.textContent=m;t.style.display="block";setTimeout(()=>t.style.display="none",1500);}
+document.getElementById("secretZone").onclick=()=>{tapCount++;clearTimeout(tapTimer);tapTimer=setTimeout(()=>tapCount=0,5000);if(tapCount>=10)location.href="admin.html";};
+</script>
 </body>
 </html>
