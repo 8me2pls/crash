@@ -1,4 +1,4 @@
-// Disable right-click context menu
+q// Disable right-click context menu
 document.addEventListener('contextmenu', function(e) {
     e.preventDefault();
 });
@@ -68,3 +68,4 @@ window.addEventListener('DOMContentLoaded', function() {
         window.location.href = 'about:blank';
     }
 });
+
