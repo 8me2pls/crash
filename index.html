@@ -1,98 +1,625 @@
 <script src="Pine.js"></script>
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Minecraft Skin Statue Generator</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Skin → Statue Datapack Generator</title>
+
+  <style>
+    :root { --bg:#0e0f12; --panel:#121316; --accent:#4caf50; --muted:#9aa0a6; color-scheme: dark; }
+    body { background:var(--bg); color:#eee; font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; margin:0; padding:20px; }
+    .wrap { max-width:980px; margin:0 auto; }
+    header { display:flex; gap:12px; align-items:center; }
+    h1 { margin:.2rem 0; font-size:1.25rem; }
+    label { display:block; margin:8px 0 4px; color:var(--muted); font-size:0.9rem; }
+    .card { background:var(--panel); padding:14px; border-radius:10px; box-shadow:0 4px 18px rgba(0,0,0,0.6); margin-top:12px; }
+    input[type=file], input[type=text], select { width:100%; padding:8px; border-radius:6px; border:1px solid #222; background:#0b0c0d; color:#fff; }
+    button { padding:10px 14px; border-radius:8px; border:0; background:var(--accent); color:#04110a; font-weight:600; cursor:pointer; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+    .col { flex:1 1 220px; min-width:220px; }
+    textarea { width:100%; height:160px; background:#0b0c0d; color:#9bf; padding:10px; border-radius:6px; border:1px solid #222; font-family:monospace; }
+    footer { margin-top:12px; color:var(--muted); font-size:0.85rem; }
+    .notice { color:#f7d794; }
+    small { color:var(--muted); }
+  </style>
 </head>
-<body style="font-family:Arial;background:#121212;color:#fff;text-align:center;padding:40px;">
-  <h1>🧍 Minecraft Skin Statue Generator</h1>
-  <p>Upload a skin (.png) — generates a datapack that builds a statue with color-matched blocks.</p>
-  
-  <input type="file" id="skinUpload" accept=".png" />
-  <button id="generate">Generate Datapack</button>
-  
-  <p id="status"></p>
-  <a id="downloadLink" style="display:none;color:#0f0;font-weight:bold">⬇️ Download Datapack</a>
+<body>
+  <div class="wrap">
+    <header>
+      <img src="" alt="" id="logo" style="width:44px;height:44px;border-radius:6px;display:none">
+      <div>
+        <h1>Skin → Statue Datapack Generator</h1>
+        <small>Upload a 64×64 skin or enter a username. Choose 2D or 3D and download the datapack (1.21 format).</small>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label>Skin file (PNG, 64×64)</label>
+          <input type="file" id="skinFile" accept=".png" />
+        </div>
+        <div class="col">
+          <label>Or Minecraft username (optional)</label>
+          <input type="text" id="username" placeholder="Enter username (optional)" />
+        </div>
+      </div>
+
+      <div style="margin-top:10px" class="row">
+        <div class="col">
+          <label>Mode</label>
+          <select id="mode">
+            <option value="flat">2D — Flat pixel art (front)</option>
+            <option value="full" selected>3D — Full-body statue (head, torso, arms, legs)</option>
+          </select>
+        </div>
+
+        <div class="col">
+          <label>Scale (horizontal) — blocks per skin pixel</label>
+          <select id="scale">
+            <option value="1">1× (1 block / pixel)</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+            <option value="8" selected>8× (big statue)</option>
+          </select>
+        </div>
+
+        <div class="col">
+          <label>Vertical scaling / compress</label>
+          <select id="vscale">
+            <option value="1">1 (no compress — tall)</option>
+            <option value="0.25" selected>0.25 (compress vertical so statue is ~height/4)</option>
+            <option value="0.5">0.5</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:10px" class="row">
+        <div class="col">
+          <label>Palette (blocks used — survival)</label>
+          <select id="palette">
+            <option value="concrete" selected>Concrete + Terracotta fallback (bright)</option>
+            <option value="wool">Wool first (softer)</option>
+            <option value="mix">Concrete + Terracotta + Wool (best match)</option>
+          </select>
+        </div>
+
+        <div class="col">
+          <label>Facing</label>
+          <select id="facing">
+            <option value="south" selected>South (front faces south)</option>
+            <option value="north">North</option>
+            <option value="east">East</option>
+            <option value="west">West</option>
+          </select>
+        </div>
+
+        <div class="col" style="display:flex;align-items:flex-end;">
+          <button id="generateBtn">Generate Datapack</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label>Preview / Log</label>
+        <textarea id="log" readonly placeholder="Status & sample commands will show here..."></textarea>
+      </div>
+    </div>
+
+    <div style="margin-top:12px" class="card" id="downloadCard" hidden>
+      <a id="downloadLink" href="#" download="SkinStatueDatapack.zip" style="font-weight:700;color:var(--accent)">⬇️ Download datapack</a>
+      <div style="margin-top:8px"><small>Drop this zip into your world's <code>datapacks/</code> folder and run <code>/function statue:create_flat</code> or <code>/function statue:create_full</code></small></div>
+    </div>
+
+    <footer>
+      <div class="notice">Note:</div>
+      <small>Large scales produce many setblock commands (datapack size grows). For huge statues, prefer building with Litematica or WorldEdit. This tool produces vanilla datapacks (.mcfunction) you can paste and run.</small>
+    </footer>
+  </div>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <script>
-    const palette = [
-      { block: "white_concrete", rgb: [207,213,214] },
-      { block: "orange_concrete", rgb: [224,97,1] },
-      { block: "magenta_concrete", rgb: [169,48,159] },
-      { block: "light_blue_concrete", rgb: [36,137,199] },
-      { block: "yellow_concrete", rgb: [241,175,21] },
-      { block: "lime_concrete", rgb: [94,168,24] },
-      { block: "pink_concrete", rgb: [213,101,142] },
-      { block: "gray_concrete", rgb: [54,57,61] },
-      { block: "light_gray_concrete", rgb: [125,125,115] },
-      { block: "cyan_concrete", rgb: [21,119,136] },
-      { block: "purple_concrete", rgb: [100,31,156] },
-      { block: "blue_concrete", rgb: [44,46,143] },
-      { block: "brown_concrete", rgb: [95,59,32] },
-      { block: "green_concrete", rgb: [73,91,36] },
-      { block: "red_concrete", rgb: [142,33,33] },
-      { block: "black_concrete", rgb: [8,10,15] }
-    ];
+  // ---------- Palette definitions (RGB approximations) ----------
+  const PALETTES = {
+    concrete: [
+      {name:"white_concrete", rgb:[207,213,214]},
+      {name:"orange_concrete", rgb:[224,97,1]},
+      {name:"magenta_concrete", rgb:[169,48,159]},
+      {name:"light_blue_concrete", rgb:[36,137,199]},
+      {name:"yellow_concrete", rgb:[241,175,21]},
+      {name:"lime_concrete", rgb:[94,168,24]},
+      {name:"pink_concrete", rgb:[213,101,142]},
+      {name:"gray_concrete", rgb:[54,57,61]},
+      {name:"light_gray_concrete", rgb:[125,125,115]},
+      {name:"cyan_concrete", rgb:[21,119,136]},
+      {name:"purple_concrete", rgb:[100,31,156]},
+      {name:"blue_concrete", rgb:[44,46,143]},
+      {name:"brown_concrete", rgb:[95,59,32]},
+      {name:"green_concrete", rgb:[73,91,36]},
+      {name:"red_concrete", rgb:[142,33,33]},
+      {name:"black_concrete", rgb:[8,10,15]}
+    ],
+    wool: [
+      {name:"white_wool", rgb:[234,236,237]},
+      {name:"orange_wool", rgb:[241,118,20]},
+      {name:"magenta_wool", rgb:[191,78,179]},
+      {name:"light_blue_wool", rgb:[60,174,221]},
+      {name:"yellow_wool", rgb:[249,198,115]},
+      {name:"lime_wool", rgb:[173,203,74]},
+      {name:"pink_wool", rgb:[237,141,172]},
+      {name:"gray_wool", rgb:[70,70,70]},
+      {name:"light_gray_wool", rgb:[170,170,170]},
+      {name:"cyan_wool", rgb:[22,120,129]},
+      {name:"purple_wool", rgb:[137,50,168]},
+      {name:"blue_wool", rgb:[60,68,170]},
+      {name:"brown_wool", rgb:[102,73,41]},
+      {name:"green_wool", rgb:[84,109,27]},
+      {name:"red_wool", rgb:[160,39,34]},
+      {name:"black_wool", rgb:[20,20,20]}
+    ],
+    mix: [] // will be filled as ascending mix of concrete->terracotta->wool
+  };
 
-    function closestBlock(r,g,b) {
-      let best = palette[0];
-      let bestDist = Infinity;
-      for (const p of palette) {
-        const [pr,pg,pb] = p.rgb;
-        const dist = (r-pr)**2 + (g-pg)**2 + (b-pb)**2;
-        if (dist < bestDist) {
-          bestDist = dist;
-          best = p;
+  // create a mixed palette (concrete + terracotta + wool) for best matches
+  (function fillMix(){
+    const terracotta = [
+      {name:"white_terracotta", rgb:[209,177,161]},
+      {name:"orange_terracotta", rgb:[161,86,37]},
+      {name:"magenta_terracotta", rgb:[151,88,137]},
+      {name:"light_blue_terracotta", rgb:[123,145,151]},
+      {name:"yellow_terracotta", rgb:[236,160,68]},
+      {name:"lime_terracotta", rgb:[132,153,76]},
+      {name:"pink_terracotta", rgb:[197,136,145]},
+      {name:"gray_terracotta", rgb:[86,63,64]},
+      {name:"light_gray_terracotta", rgb:[137,101,98]},
+      {name:"cyan_terracotta", rgb:[76,120,100]},
+      {name:"purple_terracotta", rgb:[124,64,85]},
+      {name:"blue_terracotta", rgb:[60,78,99]},
+      {name:"brown_terracotta", rgb:[90,62,42]},
+      {name:"green_terracotta", rgb:[74,90,63]},
+      {name:"red_terracotta", rgb:[121,72,68]},
+      {name:"black_terracotta", rgb:[38,30,28]}
+    ];
+    PALETTES.mix = PALETTES.concrete.concat(terracotta).concat(PALETTES.wool);
+  })();
+
+  // ---------- util: color distance / nearest block ----------
+  function nearestBlockName(r,g,b, paletteKey){
+    const pal = PALETTES[paletteKey] || PALETTES.concrete;
+    let best = pal[0]; let bestDist = Infinity;
+    for (const p of pal){
+      const [pr,pg,pb] = p.rgb;
+      const d = (r-pr)*(r-pr) + (g-pg)*(g-pg) + (b-pb)*(b-pb);
+      if (d < bestDist){ bestDist = d; best = p; }
+    }
+    return best.name;
+  }
+
+  // ---------- skin layout constants (from skin-spec) ----------
+  // rectangles in the form [x1,y1,x2,y2) — x2/y2 exclusive
+  const LAYOUT = {
+    head: {
+      front:[8,8,16,16], back:[24,8,32,16], left:[16,8,24,16], right:[0,8,8,16],
+      top:[8,0,16,8], bottom:[16,0,24,8],
+      overlay_front:[40,8,48,16], overlay_back:[56,8,64,16], overlay_left:[48,8,56,16], overlay_right:[32,8,40,16], overlay_top:[40,0,48,8], overlay_bottom:[48,0,56,8]
+    },
+    torso: {
+      front:[20,20,28,32], back:[32,20,40,32], left:[28,20,32,32], right:[16,20,20,32],
+      top:[20,16,28,20], bottom:[28,16,36,20],
+      overlay_front:[20,36,28,48], overlay_back:[32,36,40,48], overlay_left:[28,36,32,48], overlay_right:[16,36,20,48], overlay_top:[20,32,28,36], overlay_bottom:[28,32,36,36]
+    },
+    right_arm: {
+      front:[44,20,48,32], back:[52,20,56,32], left:[48,20,52,32], right:[40,20,44,32],
+      top:[44,16,48,20], bottom:[48,16,52,20],
+      overlay_front:[44,36,48,48], overlay_back:[52,36,56,48], overlay_left:[48,36,52,48], overlay_right:[40,36,44,48], overlay_top:[44,32,48,36], overlay_bottom:[48,32,52,36]
+    },
+    left_arm: { // note: left arm is in the lower-right area for modern skins
+      front:[36,52,40,64], back:[44,52,48,64], left:[40,52,44,64], right:[32,52,36,64],
+      top:[36,48,40,52], bottom:[40,48,44,52],
+      overlay_front:[52,52,56,64], overlay_back:[60,52,64,64], overlay_left:[56,52,60,64], overlay_right:[48,52,52,64], overlay_top:[52,48,56,52], overlay_bottom:[56,48,60,52]
+    },
+    right_leg: {
+      front:[4,20,8,32], back:[12,20,16,32], left:[8,20,12,32], right:[0,20,4,32],
+      top:[4,16,8,20], bottom:[8,16,12,20],
+      overlay_front:[4,36,8,48], overlay_back:[12,36,16,48], overlay_left:[8,36,12,48], overlay_right:[0,36,4,48], overlay_top:[4,32,8,36], overlay_bottom:[8,32,12,36]
+    },
+    left_leg: { // left leg lower-right area
+      front:[20,52,24,64], back:[28,52,32,64], left:[24,52,28,64], right:[16,52,20,64],
+      top:[20,48,24,52], bottom:[24,48,28,52],
+      overlay_front:[20,36,24,48], overlay_back:[28,36,32,48], overlay_left:[24,36,28,48], overlay_right:[16,36,20,48], overlay_top:[20,32,24,36], overlay_bottom:[24,32,28,36]
+    }
+  };
+
+  // ---------- helpers to read pixel from ImageData ----------
+  function getPixel(imgData, x, y){
+    if (x < 0 || y < 0 || x >= imgData.width || y >= imgData.height) return [0,0,0,0];
+    const i = (y * imgData.width + x) * 4;
+    return [ imgData.data[i], imgData.data[i+1], imgData.data[i+2], imgData.data[i+3] ];
+  }
+
+  // ---------- core: generate commands ----------
+  function generateFlatCommands(imgData, scale, vscale, paletteKey, facing){
+    // flat: build on X (left→right) and Y (up), front constant Z=~0
+    // Use origin at the player's feet as baseline; we'll place bottom of flat art at ~ (so player runs /function statue:create_flat)
+    const w = imgData.width, h = imgData.height;
+    const cmds = [];
+    // Use front facing direction by rotating coordinates accordingly later if needed
+    // We'll map skin pixel (x,y) where (0,0) is top-left of image; we want bottom-left at Y=0
+    for (let y=0;y<h;y++){
+      for (let x=0;x<w;x++){
+        const [r,g,b,a] = getPixel(imgData, x, y);
+        if (a < 10) continue;
+        const block = nearestBlockName(r,g,b,paletteKey);
+        // scaled placement: for scale>1 we fill an Sx x Sv area per pixel
+        for (let sx=0;sx<scale;sx++){
+          for (let sy=0;sy<Math.max(1, Math.round(scale*vscale));sy++){
+            // compute relative coords (use ~ offsets)
+            const rx = x*scale + sx;
+            // invert y so skin top becomes higher Y
+            const ry = (h - 1 - y)*Math.max(1, Math.round(scale*vscale)) + sy;
+            const rz = 0; // front plane
+            // rotate based on facing
+            const rel = rotateXYZ(rx, ry, rz, facing);
+            cmds.push(`setblock ~${rel.x} ~${rel.y} ~${rel.z} minecraft:${block}`);
+          }
         }
       }
-      return best.block;
+    }
+    return cmds;
+  }
+
+  // rotate relative coords depending on facing (south==default)
+  function rotateXYZ(x,y,z,facing){
+    // facing 'south' = default: x->east, z->south
+    // We'll map x -> east axis (~x), z -> south axis (~z)
+    // For north, east/west flip
+    // We'll just reassign coordinates: keep y unchanged
+    if (facing === 'south') return {x:x, y:y, z:z};
+    if (facing === 'north') return {x:-x, y:y, z:-z};
+    if (facing === 'east') return {x:z, y:y, z:-x};
+    if (facing === 'west') return {x:-z, y:y, z:x};
+    return {x,y,z};
+  }
+
+  // ---------- generate FULL 3D statue commands ----------
+  // Approach: render each visible face of each body cuboid (head, torso, arms, legs).
+  // For each face we sample the face rectangle from the skin and place blocks at that face plane.
+  function generateFullCommands(imgData, scale, vscale, paletteKey, facing){
+    const cmds = [];
+    // sizes (in skin pixels)
+    const sizes = {
+      head: {w:8,h:8,d:8},
+      body: {w:8,h:12,d:4},
+      arm: {w:4,h:12,d:4},
+      leg: {w:4,h:12,d:4}
+    };
+
+    // convert to block dimensions
+    const s = scale|0;
+    const vs = Math.max(1, Math.round(scale * vscale));
+
+    // vertical stacking
+    const legHeightBlocks = sizes.leg.h * vs; // 12 * vs
+    const bodyHeightBlocks = sizes.body.h * vs; // 12 * vs
+    const headHeightBlocks = sizes.head.h * vs; // 8 * vs
+
+    // horizontal positions (x axis)
+    // we'll align torso so its left x starts at X = 0 (so torso occupies 0..(8*s-1))
+    const torsoX0 = 0;
+    const torsoZFront = 0; // torso front plane at z=0 (positive z)
+    const torsoDepthBlocks = sizes.body.d * s;
+
+    // left arm sits to left of torso
+    const leftArmX0 = torsoX0 - (sizes.arm.w * s);
+    const rightArmX0 = torsoX0 + (sizes.body.w * s);
+
+    // legs: left leg under left half of torso
+    const leftLegX0 = torsoX0;
+    const rightLegX0 = torsoX0 + (sizes.leg.w * s);
+
+    // vertical coordinates
+    const legY0 = 0; // bottom at ~
+    const legYTop = legY0 + legHeightBlocks - 1;
+    const bodyY0 = legY0 + legHeightBlocks;
+    const bodyYTop = bodyY0 + bodyHeightBlocks - 1;
+    const headY0 = bodyYTop + 1;
+    const headYTop = headY0 + headHeightBlocks - 1;
+
+    // helper: fill a face plane from a skin rect onto world positions.
+    // faceType: 'front'|'back'|'left'|'right'|'top'|'bottom'
+    // partBox: {x0,y0,zFront,widthBlocks,heightBlocks,depthBlocks}
+    function paintFaceFromRect(partBox, faceType, rect){
+      const [rx1,ry1,rx2,ry2] = rect.map(n=>parseInt(n));
+      const wPix = rx2 - rx1, hPix = ry2 - ry1;
+      // iterate pixels within rect
+      for (let py=0; py<hPix; py++){
+        for (let px=0; px<wPix; px++){
+          const sx = rx1 + px, sy = ry1 + py;
+          const [r,g,b,a] = getPixel(imgData, sx, sy);
+          if (a < 10) continue;
+          const block = nearestBlockName(r,g,b,paletteKey);
+          // for each scaled subpixel
+          for (let subX = 0; subX < s; subX++){
+            for (let subY = 0; subY < vs; subY++){
+              for (let subZ = 0; subZ < s; subZ++){
+                // compute world coords for the face pixel depending on faceType
+                let wx=0, wy=0, wz=0;
+                // y mapping: py is from top→down in skin; we want top→down on part
+                // compute vertical offset inside part: top mapping should produce topmost blocks first
+                const partTop = partBox.yTop;
+                // pixel v coordinate (0 = top pixel)
+                const vCoord = py;
+                const yWorld = partTop - Math.round(vCoord*vs) - subY;
+
+                if (faceType === 'front'){
+                  // px left->right -> x increases
+                  const xWorld = partBox.x0 + Math.round(px*s) + subX;
+                  const zWorld = partBox.zFront;
+                  wx = xWorld; wy = yWorld; wz = zWorld - subZ;
+                } else if (faceType === 'back'){
+                  const xWorld = partBox.x0 + Math.round((wPix - 1 - px)*s) + subX; // reverse horizontally
+                  const zWorld = partBox.zFront - (partBox.depthBlocks - 1);
+                  wx = xWorld; wy = yWorld; wz = zWorld + subZ;
+                } else if (faceType === 'left'){
+                  const zWorld = partBox.zFront - Math.round((wPix - 1 - px)*s) - subZ; // left face maps across depth
+                  const xWorld = partBox.x0; // leftmost x plane
+                  wx = xWorld; wy = yWorld; wz = zWorld;
+                } else if (faceType === 'right'){
+                  const zWorld = partBox.zFront - Math.round(px*s) + subZ; // right face
+                  const xWorld = partBox.x0 + partBox.widthBlocks - 1;
+                  wx = xWorld; wy = yWorld; wz = zWorld;
+                } else if (faceType === 'top'){
+                  // top maps px->x and py->z (py from top of rect)
+                  const xWorld = partBox.x0 + Math.round(px*s) + subX;
+                  const zWorld = partBox.zFront - Math.round(py*s) - subZ;
+                  const yTopWorld = partBox.yTop;
+                  wx = xWorld; wy = yTopWorld - subY; wz = zWorld;
+                } else if (faceType === 'bottom'){
+                  const xWorld = partBox.x0 + Math.round(px*s) + subX;
+                  const zWorld = partBox.zFront - Math.round((hPix - 1 - py)*s) - subZ;
+                  const yBottomWorld = partBox.yTop - (partBox.heightBlocks - 1);
+                  wx = xWorld; wy = yBottomWorld + subY; wz = zWorld;
+                } else {
+                  continue;
+                }
+
+                const rel = rotateXYZ(wx, wy, wz, facing);
+                cmds.push(`setblock ~${rel.x} ~${rel.y} ~${rel.z} minecraft:${block}`);
+              }
+            }
+          }
+        }
+      }
     }
 
-    const generateBtn = document.getElementById('generate');
-    const upload = document.getElementById('skinUpload');
-    const link = document.getElementById('downloadLink');
-    const status = document.getElementById('status');
-
-    generateBtn.onclick = async () => {
-      const file = upload.files[0];
-      if (!file) return alert("Upload a .png Minecraft skin first!");
-      status.textContent = "Processing skin...";
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      await img.decode();
-
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-
-      let mcfunction = "say Building skin statue... \n";
-      for (let y = 0; y < img.height; y++) {
-        for (let x = 0; x < img.width; x++) {
-          const [r,g,b,a] = ctx.getImageData(x, y, 1, 1).data;
-          if (a < 128) continue; // skip transparent
-          const block = closestBlock(r,g,b);
-          mcfunction += `setblock ~${x} ~${-y} ~ ${block}\n`;
-        }
-      }
-
-      const zip = new JSZip();
-      zip.file("pack.mcmeta", JSON.stringify({
-        pack: { pack_format: 26, description: "Skin Statue Generator" }
-      }, null, 2));
-      zip.folder("data/statue/functions").file("create_statue.mcfunction", mcfunction);
-
-      const blob = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(blob);
-      link.href = url;
-      link.download = "SkinStatueDatapack.zip";
-      link.style.display = "inline";
-      link.textContent = "⬇️ Download Datapack";
-      status.textContent = "✅ Datapack ready!";
+    // Build paint operations for each part using LAYOUT rectangles.
+    // HEAD
+    const headBox = {
+      x0: torsoX0, yTop: headYTop, zFront: torsoZFront, widthBlocks: sizes.head.w * s, heightBlocks: sizes.head.h * vs, depthBlocks: sizes.head.d * s
     };
+    // head faces
+    paintFaceFromRect(headBox, 'front', LAYOUT.head.front);
+    paintFaceFromRect(headBox, 'back', LAYOUT.head.back);
+    paintFaceFromRect(headBox, 'left', LAYOUT.head.left);
+    paintFaceFromRect(headBox, 'right', LAYOUT.head.right);
+    paintFaceFromRect(headBox, 'top', LAYOUT.head.top);
+    paintFaceFromRect(headBox, 'bottom', LAYOUT.head.bottom);
+    // helmet overlay (applied on same faces if non-transparent)
+    paintFaceFromRect(headBox, 'front', LAYOUT.head.overlay_front);
+    paintFaceFromRect(headBox, 'back', LAYOUT.head.overlay_back);
+    paintFaceFromRect(headBox, 'left', LAYOUT.head.overlay_left);
+    paintFaceFromRect(headBox, 'right', LAYOUT.head.overlay_right);
+    paintFaceFromRect(headBox, 'top', LAYOUT.head.overlay_top);
+    paintFaceFromRect(headBox, 'bottom', LAYOUT.head.overlay_bottom);
+
+    // TORSO (body)
+    const torsoBox = {
+      x0: torsoX0, yTop: bodyYTop, zFront: torsoZFront, widthBlocks: sizes.body.w * s, heightBlocks: sizes.body.h * vs, depthBlocks: sizes.body.d * s
+    };
+    paintFaceFromRect(torsoBox, 'front', LAYOUT.torso.front);
+    paintFaceFromRect(torsoBox, 'back', LAYOUT.torso.back);
+    paintFaceFromRect(torsoBox, 'left', LAYOUT.torso.left);
+    paintFaceFromRect(torsoBox, 'right', LAYOUT.torso.right);
+    paintFaceFromRect(torsoBox, 'top', LAYOUT.torso.top);
+    paintFaceFromRect(torsoBox, 'bottom', LAYOUT.torso.bottom);
+    // torso overlay
+    paintFaceFromRect(torsoBox, 'front', LAYOUT.torso.overlay_front);
+    paintFaceFromRect(torsoBox, 'back', LAYOUT.torso.overlay_back);
+    paintFaceFromRect(torsoBox, 'left', LAYOUT.torso.overlay_left);
+    paintFaceFromRect(torsoBox, 'right', LAYOUT.torso.overlay_right);
+    paintFaceFromRect(torsoBox, 'top', LAYOUT.torso.overlay_top);
+    paintFaceFromRect(torsoBox, 'bottom', LAYOUT.torso.overlay_bottom);
+
+    // RIGHT ARM
+    const rightArmBox = {
+      x0: rightArmX0, yTop: bodyYTop, zFront: torsoZFront, widthBlocks: sizes.arm.w * s, heightBlocks: sizes.arm.h * vs, depthBlocks: sizes.arm.d * s
+    };
+    paintFaceFromRect(rightArmBox, 'front', LAYOUT.right_arm.front);
+    paintFaceFromRect(rightArmBox, 'back', LAYOUT.right_arm.back);
+    paintFaceFromRect(rightArmBox, 'left', LAYOUT.right_arm.left);
+    paintFaceFromRect(rightArmBox, 'right', LAYOUT.right_arm.right);
+    paintFaceFromRect(rightArmBox, 'top', LAYOUT.right_arm.top);
+    paintFaceFromRect(rightArmBox, 'bottom', LAYOUT.right_arm.bottom);
+    paintFaceFromRect(rightArmBox, 'front', LAYOUT.right_arm.overlay_front);
+    paintFaceFromRect(rightArmBox, 'back', LAYOUT.right_arm.overlay_back);
+    paintFaceFromRect(rightArmBox, 'left', LAYOUT.right_arm.overlay_left);
+    paintFaceFromRect(rightArmBox, 'right', LAYOUT.right_arm.overlay_right);
+    paintFaceFromRect(rightArmBox, 'top', LAYOUT.right_arm.overlay_top);
+    paintFaceFromRect(rightArmBox, 'bottom', LAYOUT.right_arm.overlay_bottom);
+
+    // LEFT ARM
+    const leftArmBox = {
+      x0: leftArmX0, yTop: bodyYTop, zFront: torsoZFront, widthBlocks: sizes.arm.w * s, heightBlocks: sizes.arm.h * vs, depthBlocks: sizes.arm.d * s
+    };
+    paintFaceFromRect(leftArmBox, 'front', LAYOUT.left_arm.front);
+    paintFaceFromRect(leftArmBox, 'back', LAYOUT.left_arm.back);
+    paintFaceFromRect(leftArmBox, 'left', LAYOUT.left_arm.left);
+    paintFaceFromRect(leftArmBox, 'right', LAYOUT.left_arm.right);
+    paintFaceFromRect(leftArmBox, 'top', LAYOUT.left_arm.top);
+    paintFaceFromRect(leftArmBox, 'bottom', LAYOUT.left_arm.bottom);
+    paintFaceFromRect(leftArmBox, 'front', LAYOUT.left_arm.overlay_front);
+    paintFaceFromRect(leftArmBox, 'back', LAYOUT.left_arm.overlay_back);
+    paintFaceFromRect(leftArmBox, 'left', LAYOUT.left_arm.overlay_left);
+    paintFaceFromRect(leftArmBox, 'right', LAYOUT.left_arm.overlay_right);
+    paintFaceFromRect(leftArmBox, 'top', LAYOUT.left_arm.overlay_top);
+    paintFaceFromRect(leftArmBox, 'bottom', LAYOUT.left_arm.overlay_bottom);
+
+    // RIGHT LEG
+    const rightLegBox = {
+      x0: rightLegX0, yTop: legYTop, zFront: torsoZFront, widthBlocks: sizes.leg.w * s, heightBlocks: sizes.leg.h * vs, depthBlocks: sizes.leg.d * s
+    };
+    paintFaceFromRect(rightLegBox, 'front', LAYOUT.right_leg.front);
+    paintFaceFromRect(rightLegBox, 'back', LAYOUT.right_leg.back);
+    paintFaceFromRect(rightLegBox, 'left', LAYOUT.right_leg.left);
+    paintFaceFromRect(rightLegBox, 'right', LAYOUT.right_leg.right);
+    paintFaceFromRect(rightLegBox, 'top', LAYOUT.right_leg.top);
+    paintFaceFromRect(rightLegBox, 'bottom', LAYOUT.right_leg.bottom);
+    paintFaceFromRect(rightLegBox, 'front', LAYOUT.right_leg.overlay_front);
+    paintFaceFromRect(rightLegBox, 'back', LAYOUT.right_leg.overlay_back);
+    paintFaceFromRect(rightLegBox, 'left', LAYOUT.right_leg.overlay_left);
+    paintFaceFromRect(rightLegBox, 'right', LAYOUT.right_leg.overlay_right);
+    paintFaceFromRect(rightLegBox, 'top', LAYOUT.right_leg.overlay_top);
+    paintFaceFromRect(rightLegBox, 'bottom', LAYOUT.right_leg.overlay_bottom);
+
+    // LEFT LEG
+    const leftLegBox = {
+      x0: leftLegX0, yTop: legYTop, zFront: torsoZFront, widthBlocks: sizes.leg.w * s, heightBlocks: sizes.leg.h * vs, depthBlocks: sizes.leg.d * s
+    };
+    paintFaceFromRect(leftLegBox, 'front', LAYOUT.left_leg.front);
+    paintFaceFromRect(leftLegBox, 'back', LAYOUT.left_leg.back);
+    paintFaceFromRect(leftLegBox, 'left', LAYOUT.left_leg.left);
+    paintFaceFromRect(leftLegBox, 'right', LAYOUT.left_leg.right);
+    paintFaceFromRect(leftLegBox, 'top', LAYOUT.left_leg.top);
+    paintFaceFromRect(leftLegBox, 'bottom', LAYOUT.left_leg.bottom);
+    paintFaceFromRect(leftLegBox, 'front', LAYOUT.left_leg.overlay_front);
+    paintFaceFromRect(leftLegBox, 'back', LAYOUT.left_leg.overlay_back);
+    paintFaceFromRect(leftLegBox, 'left', LAYOUT.left_leg.overlay_left);
+    paintFaceFromRect(leftLegBox, 'right', LAYOUT.left_leg.overlay_right);
+    paintFaceFromRect(leftLegBox, 'top', LAYOUT.left_leg.overlay_top);
+    paintFaceFromRect(leftLegBox, 'bottom', LAYOUT.left_leg.overlay_bottom);
+
+    return cmds;
+  }
+
+  // ---------- UI wiring ----------
+  const skinFile = document.getElementById('skinFile');
+  const usernameInput = document.getElementById('username');
+  const generateBtn = document.getElementById('generateBtn');
+  const logArea = document.getElementById('log');
+  const downloadCard = document.getElementById('downloadCard');
+  const downloadLink = document.getElementById('downloadLink');
+
+  function log(msg){
+    logArea.value += msg + "\n";
+    logArea.scrollTop = logArea.scrollHeight;
+  }
+
+  generateBtn.addEventListener('click', async ()=>{
+    downloadCard.hidden = true; downloadLink.href = "#"; downloadLink.download = "";
+    logArea.value = "";
+    log("Starting...");
+
+    // load skin image (from file OR username)
+    let img;
+    if (skinFile.files && skinFile.files[0]){
+      img = new Image();
+      img.src = URL.createObjectURL(skinFile.files[0]);
+      await img.decode();
+    } else if (usernameInput.value.trim()){
+      const user = usernameInput.value.trim();
+      log(`Fetching skin for ${user}...`);
+      try {
+        const uuidRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(user)}`);
+        if (!uuidRes.ok) { log("Username not found."); alert("Player not found"); return; }
+        const { id } = await uuidRes.json();
+        const session = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${id}`);
+        const data = await session.json();
+        const textureURL = JSON.parse(atob(data.properties[0].value)).textures.SKIN.url;
+        img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = textureURL;
+        await img.decode();
+      } catch(e){ log("Failed fetching skin: "+e.message); alert("Failed to fetch skin"); return; }
+    } else {
+      alert("Upload a skin PNG (64×64) or enter a username.");
+      return;
+    }
+
+    // verify size 64x64
+    if (img.width !== 64 || img.height !== 64){
+      log(`WARNING: skin not 64x64 (actual ${img.width}×${img.height}). Attempting to continue...`);
+    }
+
+    // draw to canvas & get ImageData
+    const canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 64;
+    const ctx = canvas.getContext('2d', {willReadFrequently:true});
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img, 0, 0, 64, 64);
+    const imgData = ctx.getImageData(0,0,64,64);
+
+    // options
+    const mode = document.getElementById('mode').value;
+    const scale = parseInt(document.getElementById('scale').value,10) || 8;
+    const vscale = parseFloat(document.getElementById('vscale').value) || 0.25;
+    const paletteKey = document.getElementById('palette').value;
+    const facing = document.getElementById('facing').value;
+
+    log(`Mode: ${mode}, scale: ${scale}×, vscale: ${vscale}, palette: ${paletteKey}, facing: ${facing}`);
+
+    // create mcfunction content(s)
+    let flatCmds = ["# Generated by Skin Statue Generator", "say Building flat statue..."];
+    let fullCmds = ["# Generated by Skin Statue Generator", "say Building 3D statue..."];
+
+    if (mode === 'flat' || true){
+      log("Generating flat commands...");
+      const fc = generateFlatCommands(imgData, scale, vscale, paletteKey, facing);
+      flatCmds = flatCmds.concat(fc);
+      log(`Flat commands: ${fc.length}`);
+    }
+
+    if (mode === 'full' || true){
+      log("Generating full 3D commands (may be large)...");
+      const fc2 = generateFullCommands(imgData, scale, vscale, paletteKey, facing);
+      fullCmds = fullCmds.concat(fc2);
+      log(`Full commands: ${fc2.length}`);
+    }
+
+    // Build datapack zip
+    log("Packaging datapack...");
+    const zip = new JSZip();
+    const packMeta = { pack: { pack_format: 26, description: "Skin Statue Generator (generated)" } };
+    zip.file("pack.mcmeta", JSON.stringify(packMeta, null, 2));
+
+    // create folders & files
+    zip.folder("data/statue/functions").file("create_flat.mcfunction", flatCmds.join("\n"));
+    zip.folder("data/statue/functions").file("create_full.mcfunction", fullCmds.join("\n"));
+    // README
+    const readme = [
+      "Skin Statue Datapack",
+      "Drop this zip into your world's datapacks/ folder and run:",
+      " /reload",
+      " /function statue:create_flat   # flat pixel-art statue (front)",
+      " /function statue:create_full   # full 3D statue (head, torso, arms, legs)",
+      "Default facing: " + facing,
+      "Generated with scale: " + scale + " (vertical scale factor: " + vscale + ")",
+      "",
+      "Notes:",
+      "- Large scales will create many setblock commands and may be slow to run.",
+      "- If the function file is too big / times out in vanilla, use smaller scale or paste with WorldEdit / FAWE."
+    ].join("\n");
+    zip.file("README.txt", readme);
+
+    const blob = await zip.generateAsync({type:"blob"});
+    const url = URL.createObjectURL(blob);
+    downloadLink.href = url;
+    downloadLink.download = "SkinStatueDatapack.zip";
+    downloadCard.hidden = false;
+    log("Done — datapack ready. Click download link above.");
+
+  });
   </script>
 </body>
 </html>
