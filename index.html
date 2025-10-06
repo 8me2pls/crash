@@ -2,168 +2,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>H4X3R Tools</title>
-<style>
-html, body {height:100%; margin:0; padding:0; font-family:'Roboto',sans-serif; background: linear-gradient(to bottom,#2b003d 0%,#1a1a2e 60%,#3b0a54 100%); color:#fff; overflow-x:hidden;}
-body {display:flex; flex-direction:column; justify-content:space-between; align-items:center; min-height:100vh;}
-header {width:100%; padding:20px; background:linear-gradient(90deg,#00bfff,#6a0dad); text-align:center; font-size:32px; font-weight:700; color:#fff; text-shadow:0 0 5px #fff,0 0 10px #6a0dad,0 0 20px #00bfff; border-bottom-left-radius:40px; border-bottom-right-radius:40px; box-shadow:0 4px 20px rgba(0,0,0,0.5);}
-.container {width:90%; max-width:700px; background:rgba(255,255,255,0.05); padding:25px; border-radius:50px; box-shadow:0 0 25px rgba(106,13,173,0.5); backdrop-filter:blur(10px); margin-top:40px;}
-input, button {width:100%; padding:14px; margin:10px 0; border-radius:50px; font-size:16px; box-sizing:border-box;}
-input {border:2px solid #6a0dad; background:rgba(255,255,255,0.05); color:#fff;}
-input:focus {outline:none; border-color:#00bfff; box-shadow:0 0 12px #00bfff;}
-button {background:linear-gradient(45deg,#6a0dad,#00bfff); color:#fff; border:none; cursor:pointer; font-weight:500; transition:0.3s; box-shadow:0 0 12px rgba(0,191,255,0.5);}
-button:hover {transform:scale(1.05); box-shadow:0 0 18px rgba(0,191,255,0.8);}
-#onboarding {display:block; text-align:center;}
-.step {margin:15px 0;}
-.step button {position:relative;}
-.step.done button {background:#2e7d32;}
-.step.done button::after {content:"✔"; position:absolute; right:15px; font-weight:bold;}
-.category {background:rgba(255,255,255,0.1); margin:8px 0; padding:14px 20px; border-radius:50px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;}
-.tools {display:none; flex-direction:column; margin-top:8px;}
-.tool-item {margin:5px 0;}
-.tool-item button {border-radius:50px; padding:12px 20px; background:linear-gradient(45deg,#00bfff,#6a0dad);}
-#modal {display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); justify-content:center; align-items:center; color:#fff; padding:20px; z-index:1000;}
-#modalInner {position:relative; background:rgba(255,255,255,0.05); padding:25px 30px; padding-top:36px; border-radius:20px; max-width:760px; width:calc(100% - 40px); max-height:80vh; overflow-y:auto; white-space:pre-wrap;}
-#copyBtn {position:absolute; top:8px; right:12px; font-size:20px; cursor:pointer;}
-#toast {position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); padding:10px 14px; border-radius:14px; display:none; z-index:2000;}
-#loading {display:flex; justify-content:center; align-items:center; height:100vh; font-size:20px; font-weight:500; color:#fff; position:absolute; top:0; left:0; width:100%;}
-footer {width:100%; padding:20px; background:rgba(0,0,0,0.9); text-align:center; font-size:14px; color:#ccc;}
-#secretZone {position:fixed; bottom:10px; left:10px; width:50px; height:50px; background:transparent;}
-</style>
+  <meta charset="UTF-8" />
+  <title>Minecraft Skin Statue Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
-<body>
-<header>H4X3R Tools</header>
+<body style="font-family:Arial;background:#121212;color:#fff;text-align:center;padding:40px;">
+  <h1>🧍 Minecraft Skin Statue Generator</h1>
+  <p>Upload a skin (.png) — generates a datapack that builds a statue with color-matched blocks.</p>
+  
+  <input type="file" id="skinUpload" accept=".png" />
+  <button id="generate">Generate Datapack</button>
+  
+  <p id="status"></p>
+  <a id="downloadLink" style="display:none;color:#0f0;font-weight:bold">⬇️ Download Datapack</a>
 
-<div id="loading">⏳ Loading...</div>
+  <script>
+    const palette = [
+      { block: "white_concrete", rgb: [207,213,214] },
+      { block: "orange_concrete", rgb: [224,97,1] },
+      { block: "magenta_concrete", rgb: [169,48,159] },
+      { block: "light_blue_concrete", rgb: [36,137,199] },
+      { block: "yellow_concrete", rgb: [241,175,21] },
+      { block: "lime_concrete", rgb: [94,168,24] },
+      { block: "pink_concrete", rgb: [213,101,142] },
+      { block: "gray_concrete", rgb: [54,57,61] },
+      { block: "light_gray_concrete", rgb: [125,125,115] },
+      { block: "cyan_concrete", rgb: [21,119,136] },
+      { block: "purple_concrete", rgb: [100,31,156] },
+      { block: "blue_concrete", rgb: [44,46,143] },
+      { block: "brown_concrete", rgb: [95,59,32] },
+      { block: "green_concrete", rgb: [73,91,36] },
+      { block: "red_concrete", rgb: [142,33,33] },
+      { block: "black_concrete", rgb: [8,10,15] }
+    ];
 
-<div class="container">
-  <!-- Onboarding -->
-  <div id="onboarding">
-    <h2>⚡ Welcome to H4XER Tools</h2>
-    <div class="step" id="step1">
-      <button onclick="completeStep(1,'https://t.me/@sz_co0')">Contact Tele</button>
-    </div>
-    <div class="step" id="step2" style="display:none;">
-      <button onclick="completeStep(2,'https://instagram.com/itxsalaih')">Join Channel</button>
-    </div>
-    <div class="step" id="step3" style="display:none;">
-      <button onclick="startApp()">🚀 Explore Tools</button>
-    </div>
-  </div>
-
-  <!-- Login -->
-  <div id="loginBox" style="display:none;">
-    <h2>🔑 Enter Access Code</h2>
-    <input id="passwordInput" type="password" placeholder="Enter access code...">
-    <button id="unlockBtn">🔓 Unlock</button>
-  </div>
-
-  <!-- Tools -->
-  <div id="toolSection" style="display:none;">
-    <h2>🛠 Categories</h2>
-    <div id="categoriesList"></div>
-  </div>
-</div>
-
-<!-- Modal -->
-<div id="modal" onclick="closeModal()">
-  <div id="modalInner" onclick="event.stopPropagation()">
-    <span id="copyBtn" onclick="copyModalText()">📋</span>
-    <div id="modalContent"></div>
-  </div>
-</div>
-<div id="toast"></div>
-<div id="secretZone"></div>
-
-<footer>
-  <p>Developed by Dev sz_co | All rights reserved 2025</p>
-</footer>
-
-<script>
-const BIN_ID="68d3ae8ed0ea881f4088e97d";
-const API_KEY="$2a$10$WU9EPi5LbC9ImvrT7UMbUe/5OEEKQc.AobH.V7aAyzLmSvaMnJ0NO";
-const BIN_URL=`https://api.jsonbin.io/v3/b/${BIN_ID}`;
-let binData=null,isLoading=true,tapCount=0,tapTimer=null;
-
-async function loadData(){
-  const loadingEl = document.getElementById('loading');
-  try{
-    const res = await fetch(BIN_URL,{headers:{"X-Master-Key":API_KEY}});
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    if(!json.record) throw new Error("No 'record' found in JSON");
-    binData=json.record;
-    isLoading=false;
-    loadingEl.remove();
-
-    // 👇 Skip onboarding if already done
-    if(localStorage.getItem("onboardingDone")){
-      document.getElementById("onboarding").style.display="none";
-      document.getElementById("loginBox").style.display="block";
+    function closestBlock(r,g,b) {
+      let best = palette[0];
+      let bestDist = Infinity;
+      for (const p of palette) {
+        const [pr,pg,pb] = p.rgb;
+        const dist = (r-pr)**2 + (g-pg)**2 + (b-pb)**2;
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = p;
+        }
+      }
+      return best.block;
     }
-  }catch(e){
-    console.error(e);
-    loadingEl.innerText="❌ Failed to load data: "+e.message;
-  }
-}
-loadData();
 
-function completeStep(step,link){
-  window.open(link,"_blank");
-  const el=document.getElementById("step"+step);
-  el.classList.add("done");
-  setTimeout(()=>{
-    if(step===1) document.getElementById("step2").style.display="block";
-    if(step===2) document.getElementById("step3").style.display="block";
-  },2000);
-}
+    const generateBtn = document.getElementById('generate');
+    const upload = document.getElementById('skinUpload');
+    const link = document.getElementById('downloadLink');
+    const status = document.getElementById('status');
 
-function startApp(){
-  localStorage.setItem("onboardingDone","true"); // ✅ Remember completion
-  document.getElementById("onboarding").style.display="none";
-  document.getElementById("loginBox").style.display="block";
-}
+    generateBtn.onclick = async () => {
+      const file = upload.files[0];
+      if (!file) return alert("Upload a .png Minecraft skin first!");
+      status.textContent = "Processing skin...";
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      await img.decode();
 
-document.getElementById("unlockBtn").onclick=()=>{
-  if(isLoading){showToast("⏳ Loading...");return;}
-  const val=document.getElementById("passwordInput").value.trim();
-  if(val===binData.keys.toolkit){
-    document.getElementById("loginBox").style.display="none";
-    document.getElementById("toolSection").style.display="block";
-    renderCategories();
-  }else showToast("❌ Invalid access code!");
-};
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
 
-function renderCategories(){
-  const c=document.getElementById("categoriesList");c.innerHTML="";
-  binData.categories.forEach(cat=>{
-    const cd=document.createElement("div");cd.className="category";
-    cd.innerHTML=`<span>${cat.name}</span><span>▼</span>`;
-    const td=document.createElement("div");td.className="tools";
-    cat.tools.forEach(tool=>{
-      const btn=document.createElement("button");
-      btn.textContent=tool.name;
-      btn.onclick=(e)=>{
-        e.stopPropagation();
-        if(tool.link) window.open(tool.link,"_blank");
-        else if(tool.content||tool.text) openModal(tool.content||tool.text);
-        else openModal("⚠️ No content.");
-      };
-      td.appendChild(btn);
-    });
-    cd.onclick=()=>td.style.display=td.style.display==="flex"?"none":"flex";
-    c.appendChild(cd);c.appendChild(td);
-  });
-}
+      let mcfunction = "say Building skin statue... \n";
+      for (let y = 0; y < img.height; y++) {
+        for (let x = 0; x < img.width; x++) {
+          const [r,g,b,a] = ctx.getImageData(x, y, 1, 1).data;
+          if (a < 128) continue; // skip transparent
+          const block = closestBlock(r,g,b);
+          mcfunction += `setblock ~${x} ~${-y} ~ ${block}\n`;
+        }
+      }
 
-function openModal(t){document.getElementById("modalContent").innerText=t;document.getElementById("modal").style.display="flex";}
-function closeModal(){document.getElementById("modal").style.display="none";}
-function copyModalText(){navigator.clipboard.writeText(document.getElementById("modalContent").innerText).then(()=>showToast("✅ Copied"));}
-function showToast(m){const t=document.getElementById("toast");t.textContent=m;t.style.display="block";setTimeout(()=>t.style.display="none",1500);}
-document.getElementById("secretZone").onclick=()=>{tapCount++;clearTimeout(tapTimer);tapTimer=setTimeout(()=>tapCount=0,5000);if(tapCount>=10)location.href="admin.html";};
-</script>
+      const zip = new JSZip();
+      zip.file("pack.mcmeta", JSON.stringify({
+        pack: { pack_format: 26, description: "Skin Statue Generator" }
+      }, null, 2));
+      zip.folder("data/statue/functions").file("create_statue.mcfunction", mcfunction);
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = "SkinStatueDatapack.zip";
+      link.style.display = "inline";
+      link.textContent = "⬇️ Download Datapack";
+      status.textContent = "✅ Datapack ready!";
+    };
+  </script>
 </body>
 </html>
-
