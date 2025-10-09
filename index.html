@@ -613,8 +613,8 @@
     zip.file("pack.mcmeta", JSON.stringify(packMeta, null, 2));
 
     // create folders & files
-    zip.folder("data/statue/functions").file("create_flat.mcfunction", flatCmds.join("\n"));
-    zip.folder("data/statue/functions").file("create_full.mcfunction", fullCmds.join("\n"));
+    zip.folder("data/statue/function").file("create_flat.mcfunction", flatCmds.join("\n"));
+    zip.folder("data/statue/function").file("create_full.mcfunction", fullCmds.join("\n"));
     // README
     const readme = [
       "Skin Statue Datapack",
@@ -636,10 +636,9 @@
     downloadLink.href = url;
     downloadLink.download = "SkinStatueDatapack.zip";
     downloadCard.hidden = false;
-    log("Done — datapack ready. Click download link below.");
+    log("Done — datapack ready. Click download link above.");
 
   });
   </script>
 </body>
 </html>
-
